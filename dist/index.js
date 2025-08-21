@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const bai1_1 = require("./bai1");
+const bai2_1 = require("./bai2");
+const bai3_1 = require("./bai3");
+const bai4_1 = require("./bai4");
+const bai5_1 = require("./bai5");
+console.log((0, bai1_1.get)(new bai1_1.Student("200Lab", 20)));
+console.log((0, bai2_1.get)(new bai2_1.Student("200Lab", 20, "A")));
+console.log((0, bai3_1.getCarDetails)(new bai3_1.Car("Toyota", "Corolla", 2020)));
+console.log(new bai4_1.Rectangle(5, 10).area());
+console.log(new bai4_1.Rectangle(5, 10).perimeter());
+var account = new bai5_1.BankAccount("123456", "John Doe", 1000);
+console.log(account.getBalance());
+console.log(account.deposit(500));
+console.log(account.withdraw(200));
