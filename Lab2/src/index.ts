@@ -185,9 +185,60 @@ fetchUserWithTimeout(1).then((user) => {
     console.error("Error fetching user with timeout:", error);
 });
 
+//Bai 21
+import { fetchData } from "./bai21";
+fetchData();
+// { userId: 1, id: 1, title: 'delectus aut autem', completed: false }
 
+//Bai 22
+import { fetchMultipleData } from "./bai22";
+fetchMultipleData([1, 2, 3, 4, 5]);
 
+//Bài 23
+// import { fetchAndFilterTodos } from "./bai23";
+// fetchAndFilterTodos();
 
+//Bài 24
+import { postData } from "./bai24";
+postData();
 
+//Bài 25
+import { downloadFile } from "./bai25";
+downloadFile("example.pdf").then(() => {
+    console.log("📂 Download completed!");
+});
 
+//Bài 26
+//Use async/await with setTimeout to simulate a 5-second wait.
+async function waitFiveSeconds() {
+    console.log("⏳ Waiting for 5 seconds...");
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    console.log("✅ Done waiting!");
+}
+waitFiveSeconds();
 
+//Bài 27
+// Write a function fetchWithRetry(url, retries) that retries up to retries times if the API call fails.
+import { fetchWithRetry } from "./bai27";
+(async () => {
+    try {
+        const data = await fetchWithRetry("https://jsonplaceholder.typicode.com/todos/1", 3);
+        console.log("📂 Data:", data);
+    } catch (err) {
+        console.error("🚨 Fetch failed after retries:", err);
+    }
+})();
+
+//Bài 28
+import { batchProcess } from "./bai28";
+batchProcess();
+
+//Bài 29
+//Write an async function queueProcess() that processes tasks sequentially in a queue.
+import { queueProcess } from "./bai29";
+queueProcess();
+
+//Bài 30
+//Use async/await + Promise.allSettled() to handle multiple API calls and display their success/failure status.
+import { handleApiCalls } from "./bai30";
+handleApiCalls();

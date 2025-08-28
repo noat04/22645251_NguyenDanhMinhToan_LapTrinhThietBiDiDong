@@ -168,3 +168,48 @@ const bai20_1 = require("./bai20");
 }).catch((error) => {
     console.error("Error fetching user with timeout:", error);
 });
+//Bai 21
+const bai21_1 = require("./bai21");
+(0, bai21_1.fetchData)();
+// { userId: 1, id: 1, title: 'delectus aut autem', completed: false }
+//Bai 22
+const bai22_1 = require("./bai22");
+(0, bai22_1.fetchMultipleData)([1, 2, 3, 4, 5]);
+//Bài 23
+// import { fetchAndFilterTodos } from "./bai23";
+// fetchAndFilterTodos();
+//Bài 24
+const bai24_1 = require("./bai24");
+(0, bai24_1.postData)();
+//Bài 25
+const bai25_1 = require("./bai25");
+(0, bai25_1.downloadFile)("example.pdf").then(() => {
+    console.log("📂 Download completed!");
+});
+//Bài 26
+//Use async/await with setTimeout to simulate a 5-second wait.
+async function waitFiveSeconds() {
+    console.log("⏳ Waiting for 5 seconds...");
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    console.log("✅ Done waiting!");
+}
+waitFiveSeconds();
+//Bài 27
+// Write a function fetchWithRetry(url, retries) that retries up to retries times if the API call fails.
+const bai27_1 = require("./bai27");
+(async () => {
+    try {
+        const data = await (0, bai27_1.fetchWithRetry)("https://jsonplaceholder.typicode.com/todos/1", 3);
+        console.log("📂 Data:", data);
+    }
+    catch (err) {
+        console.error("🚨 Fetch failed after retries:", err);
+    }
+})();
+//Bài 28
+const bai28_1 = require("./bai28");
+(0, bai28_1.batchProcess)();
+//Bài 29
+//Write an async function queueProcess() that processes tasks sequentially in a queue.
+const bai29_1 = require("./bai29");
+(0, bai29_1.queueProcess)();
