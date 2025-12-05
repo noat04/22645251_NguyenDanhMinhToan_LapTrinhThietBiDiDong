@@ -1,0 +1,446 @@
+TỔNG HỢP CÁC BƯỚC VÀ KIẾN THỨC CẦN CÓ ĐỂ THI CUỐI KÌ
+
+BƯỚC 1:
+	MOCKAPI: tạo project 
+
+BƯỚC 2: 
+	THÊM EXTENSIONS MobileView
+
+
+BƯỚC 3:
+TẠO PROJECT
+B1: npx create-expo-app ck -t     
+B2: cd ck
+B3: npx expo install expo-router react-native-safe-area-context react-native-screens @reduxjs/toolkit 
+react-redux expo-linking react-dom react-native-web @expo/metro-runtime
+
+
+API.TS
+const API_URL = 'https://692bfd2bc829d464006e24b6.mockapi.io/product';
+
+export interface Product {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    category: string;
+    image: string;
+}
+export const fetchProducts = async (): Promise<Product[]> => {
+    const reponse = await fetch(API_URL);
+    if (!reponse.ok) {
+        throw new Error('Failed to fetch products');
+    }
+    const data = await reponse.json();
+    return data.map((item: any) => ({
+        ...item, id: String(item.id)
+    }));
+}
+
+export const addProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(product)
+    });
+    if (!response.ok) {
+        throw new Error('Failed to add product');
+    }
+    const data = await response.json();
+    return {
+        ...data, id: String(data.id)
+    };
+}
+
+export const updateProduct = async (id: string, product: Partial<Product>): Promise<Product> => {
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(product)
+    });
+    if (!response.ok) {
+        throw new Error('Failed');
+    }
+    const data = await response.json();
+    return {
+        ...data, id: String(data.id)
+    };
+}
+
+export const deleteProduct = async (id: string): Promise<void> => {
+    const response = await fetch(`${API_URL}/${id}`);
+    if (!response.ok) {
+        throw new Error('Failed');
+    }
+    return response.json();
+} 
+
+PRODUCTSLICE.TS
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { Product, fetchProducts, addProduct, updateProduct, deleteProduct } from '../service/api';
+interface ProductState {
+    items: Product[];
+    status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    error: string | null;
+}
+const intialState: ProductState = {
+    items: [],
+    status: 'idle',
+    error: null,
+}
+export const getProducts = createAsyncThunk('products/fetchProducts', async () => {
+    const response = await fetchProducts();
+    return response;
+})
+export const addNewProduct = createAsyncThunk('products/addProduct', async (product: Omit<Product, 'id'>) => {
+    const response = await addProduct(product);
+    return response;
+});
+export const updateNewProduct = createAsyncThunk('products/updateProduct', async ({ id, product }: { id: string, product: Partial<Product> }) => {
+    const response = await updateProduct(id, product);
+    return response;
+});
+export const deleteExistingProduct = createAsyncThunk('products/deleteProduct', async (id: string) => {
+    await deleteProduct(id);
+    return id;
+});
+
+const productSlice = createSlice({
+    name: 'products',
+    initialState: intialState,
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(getProducts.pending, (state) => {
+                state.status = 'loading';
+            })
+            .addCase(getProducts.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.items = action.payload;
+            })
+            .addCase(getProducts.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.error.message || 'Failed to fetch products';
+            })
+            .addCase(addNewProduct.fulfilled, (state, action) => {
+                state.items.push(action.payload);
+            })
+            .addCase(updateNewProduct.fulfilled, (state, action) => {
+                const index = state.items.findIndex(item => item.id === action.payload.id);
+                if (index !== -1) {
+                    state.items[index] = action.payload;
+                }
+            })
+            .addCase(deleteExistingProduct.fulfilled, (state, action) => {
+                state.items = state.items.filter(item => item.id !== action.payload);
+            });
+
+    },
+})
+export default productSlice.reducer;
+
+
+STORE.TS
+import { configureStore } from "@reduxjs/toolkit";
+import productReducer from "./productSlice";
+export const store = configureStore({
+    reducer: {
+        products: productReducer,
+    },
+});
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+INDEX.TS
+import 'expo-router/entry';
+
+_LAYOUT.TS
+import { Stack } from "expo-router";
+import { Provider } from "react-redux";
+import { store } from "../src/store/store";
+export default function Layout() {
+    return (
+        <Provider store={store}>
+            <Stack>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="list" options={{ title: 'Product List' }} />
+                <Stack.Screen name="[id]" options={{ title: 'Product Detail' }} />
+                <Stack.Screen name="form" options={{ title: 'Product Form' }} />
+            </Stack>
+        </Provider>
+    );
+}
+
+[id].TS
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { RootState, AppDispatch } from "../src/store/store";
+import { getProducts } from "../src/store/productSlice";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, FlatList, Image, View } from "react-native";
+
+export default function ProductDetail() {
+    const { id } = useLocalSearchParams();
+    const dispach = useDispatch<AppDispatch>();
+    const { items, status, error } = useSelector((state: RootState) => state.products);
+    const product = items.find(i => i.id === String(id));
+    useEffect(() => {
+        if ((status === 'idle')) {
+            dispach(getProducts());
+        }
+    }, [dispach, status]);
+    if (status === 'loading') return <ActivityIndicator></ActivityIndicator>
+    if (!product) return <Text>{error}</Text>
+    return (
+        <ScrollView style={{ padding: 10 }}>
+            {product.image ? (
+                <Image source={{ uri: product.image }} style={{ width: '100%', height: 200, marginBottom: 10 }} />
+            ) : null}
+            <View>
+                <Text>{product.title}</Text>
+                <Text>{product.price}</Text>
+            </View>
+        </ScrollView>
+    );
+} 
+
+FORM.TS
+import React, { use, useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { RootState, AppDispatch } from "../src/store/store";
+import { getProducts, addNewProduct, updateNewProduct } from "../src/store/productSlice";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, FlatList, Image, View, Alert } from "react-native";
+
+export default function ProductForm() {
+    const router = useRouter();
+    const params = useLocalSearchParams();
+    const dispatch = useDispatch<AppDispatch>();
+    const products = useSelector((state: RootState) => state.products.items);
+    const id = params.id ? String(params.id) : null;
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [price, setPrice] = useState('');
+    const [image, setImage] = useState('');
+    const [category, setCategory] = useState('');
+
+    useEffect(() => {
+        if (id) {
+            const product = products.find(p => p.id === id);
+            if (product) {
+                setTitle(product.title);
+                setDescription(product.description);
+                setPrice(product.price.toString());
+                setImage(product.image);
+                setCategory(product.category);
+            }
+        }
+    }, [id, products]);
+
+    const handleSubmit = async () => {
+        if (!title) {
+            Alert.alert('Validation Error', 'Title is required');
+            return;
+        }
+        const productData = {
+            title,
+            description,
+            price: parseFloat(price),
+            image,
+            category,
+        }
+
+        if (id) {
+            await dispatch(updateNewProduct({ id, product: productData })).unwrap();
+        } else {
+            await dispatch(addNewProduct(productData)).unwrap();
+            router.back();
+        }
+
+    }
+    return (
+        <ScrollView>
+            <View>
+                <Text>title</Text>
+                <TextInput
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder="title"
+                />
+            </View>
+            <View>
+                <Text>Price</Text>
+                <TextInput
+                    value={price}
+                    onChangeText={setPrice}
+                    keyboardType="numeric"
+                    placeholder="title"
+                />
+            </View>
+            <View>
+                <Text>description</Text>
+                <TextInput
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder="title"
+                />
+            </View>
+            <View>
+                <Text>category</Text>
+                <TextInput
+                    value={category}
+                    onChangeText={setCategory}
+                    placeholder="title"
+                />
+            </View>
+            <View>
+                <Text>Image</Text>
+                <TextInput
+                    value={image}
+                    onChangeText={setImage}
+                    placeholder="title"
+                />
+            </View>
+            <Pressable onPress={handleSubmit}>
+                <Text> {id ? 'update' : 'add'}</Text>
+            </Pressable>
+        </ScrollView>
+
+
+    )
+}
+
+INDEX.TS
+import { Redirect } from "expo-router";
+export default function Index() {
+    return <Redirect href="/list" />;
+}
+
+LIST.TS
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useRouter } from "expo-router";
+import { RootState, AppDispatch } from "../src/store/store";
+import { getProducts, deleteExistingProduct } from "../src/store/productSlice";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, FlatList, View } from "react-native";
+
+
+export default function ProductList() {
+
+    const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
+    const { items, status, error } = useSelector((state: RootState) => state.products);
+    const [filter, setFilter] = useState('');
+    useEffect(() => {
+        if ((status === 'idle')) {
+            dispatch(getProducts());
+        }
+    }, [dispatch, status]);
+    if (status === 'loading') return <ActivityIndicator></ActivityIndicator>
+    if (status === 'failed') return <Text>{error}</Text>
+    return (
+        <ScrollView>
+            <TextInput
+                placeholder="Tìm"
+                value={filter}
+                onChangeText={setFilter}
+                style={{ height: 40, borderColor: 'gray', borderWidth: 1, margin: 10, paddingLeft: 8 }}
+            />
+            <Pressable onPress={() => router.push('/form')}>
+                <Text style={{ fontSize: 18, color: 'blue', margin: 10 }}>Thêm sản phẩm</Text>
+            </Pressable>
+            <FlatList
+                scrollEnabled={false}
+                data={items.filter(i => i.title.toLowerCase().includes(filter.toLowerCase()))}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                    <View>
+                        <Pressable onPress={() => router.push(`/${item.id}`)} style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{item.title}</Text>
+                        </Pressable>
+                        <Text>{item.description}</Text>
+                        <Text style={{ color: 'green' }}>${item.price}</Text>
+                        <Pressable onPress={() => router.push({ pathname: '/form', params: { id: item.id } })} style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Edit</Text>
+                        </Pressable>
+                        <Pressable onPress={() => dispatch(deleteExistingProduct(item.id))} style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: '#ccc' }}>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Remove</Text>
+                        </Pressable>
+                    </View>
+
+                )
+                }
+            />
+        </ScrollView >
+    );
+} 
+
+MẢNG 
+API.TS
+// Không dùng API_URL nữa
+// const API_URL = 'https://...';
+
+export interface Product {
+    id: string;
+    title: string;
+    price: number;
+    description: string;
+    category: string;
+    image: string;
+}
+
+// ====== DỮ LIỆU LOCAL ======
+let products: Product[] = [
+    {
+        id: '1',
+        title: 'Iphone 15',
+        price: 25000000,
+        description: 'Điện thoại Apple',
+        category: 'phone',
+        image: 'https://via.placeholder.com/150'
+    },
+    {
+        id: '2',
+        title: 'Samsung Galaxy S24',
+        price: 22000000,
+        description: 'Điện thoại Samsung',
+        category: 'phone',
+        image: 'https://via.placeholder.com/150'
+    }
+];
+
+// ====== CRUD LOCAL ======
+export const fetchProducts = async (): Promise<Product[]> => {
+    return [...products]; // Không fetch API
+};
+
+export const fetchProductById = async (id: string): Promise<Product> => {
+    const found = products.find(p => p.id === id);
+    if (!found) throw new Error('Product not found');
+    return found;
+};
+
+export const addProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
+    const newProduct: Product = {
+        ...product,
+        id: (Date.now()).toString(), // Tự tạo id
+    };
+    products.push(newProduct);
+    return newProduct;
+};
+
+export const updateProduct = async (id: string, data: Partial<Product>): Promise<Product> => {
+    const index = products.findIndex(p => p.id === id);
+    if (index === -1) throw new Error('Product not found');
+
+    products[index] = { ...products[index], ...data };
+    return products[index];
+};
+
+export const deleteProduct = async (id: string): Promise<void> => {
+    products = products.filter(p => p.id !== id);
+};
