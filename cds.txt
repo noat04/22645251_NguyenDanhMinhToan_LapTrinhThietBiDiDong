@@ -1,0 +1,359 @@
+Singleton_Pattern
+
+public class DatabaseConnection {
+    // 1. Tạo một biến static private để lưu trữ instance duy nhất của class
+    private static DatabaseConnection instance;
+
+    private String connectionString;
+
+    // 2. Chặn khởi tạo đối tượng từ bên ngoài bằng constructor private
+    public DatabaseConnection() {
+        // Mô phỏng logic kết nối cơ sở dữ liệu
+        this.connectionString = "Connected to DB - Hệ thống bán vé tàu";
+        System.out.println(connectionString);
+    }
+
+    // 3. Cung cấp phương thức public static làm điểm truy cập toàn cục (Global Access Point)
+    public static DatabaseConnection getInstance() {
+        // Kiểm tra nếu instance chưa được tạo thì mới khởi tạo (Lazy Initialization)
+        if (instance == null) {
+            instance = new DatabaseConnection();
+        }
+        // Nếu đã có thì trả về instance hiện tại
+        return instance;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // Mô phỏng UserService lấy kết nối
+        DatabaseConnection db1 = DatabaseConnection.getInstance();
+
+        // Mô phỏng TicketService lấy kết nối
+        DatabaseConnection db2 = DatabaseConnection.getInstance();
+
+        System.out.println("\nKiểm chứng Singleton (db1 và db2):");
+        if (db1 == db2) {
+            System.out.println("=> TRUE. Cả db1 và db2 là CÙNG MỘT đối tượng (Duy nhất 1 instance).");
+        }
+
+        // --- KIỂM CHỨNG LỖI VI PHẠM SINGLETON VỚI db3 ---
+        System.out.println("\nThử dùng từ khóa 'new' để tạo đối tượng mới...");
+
+        // Dòng này SẼ BỊ LỖI ĐỎ nếu class DatabaseConnection cài đặt đúng (có constructor private).
+        // Nếu nó chạy được (không báo lỗi) -> Người lập trình đã cài đặt sai Singleton!
+        DatabaseConnection db3 = new DatabaseConnection();
+
+        // Sửa logic thành != (khác nhau)
+        if (db3 != db2) {
+            System.out.println("=> FALSE. db3 và db2 trỏ về hai vùng nhớ khác nhau.");
+            System.out.println("=> LỖI: Có nhiều hơn 1 đối tượng được tạo ra, vi phạm nguyên tắc Singleton!");
+        }
+    }
+}
+
+
+Observer_Pattern
+
+public interface NotificationObserver {
+    void update(String message);
+}
+
+public interface Subject {
+    void addObserver(NotificationObserver observer);
+    void removeObserver(NotificationObserver observer);
+    void notifyObservers(String message);
+}
+
+public class MobileAppNotifier implements NotificationObserver {
+    @Override
+    public void update(String message) {
+        System.out.println("📱 Đẩy thông báo Mobile App (Push Notification): " + message);
+    }
+}
+
+public class EmailNotifier implements NotificationObserver {
+    @Override
+    public void update(String message) {
+        System.out.println("📧 Gửi Email cho sinh viên: " + message);
+    }
+}
+
+public class SMSNotifier implements NotificationObserver {
+    @Override
+    public void update(String message) {
+        System.out.println("💬 Gửi tin nhắn SMS: " + message);
+    }
+}
+
+public class ScheduleManager implements Subject {
+    // Lưu trữ danh sách các kênh thông báo đang hoạt động
+    private List<NotificationObserver> observers = new ArrayList<>();
+
+    @Override
+    public void addObserver(NotificationObserver observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(NotificationObserver observer) {
+        observers.remove(observer);
+    }
+
+    // Tự động thông báo đến TẤT CẢ các kênh đang có trong danh sách
+    @Override
+    public void notifyObservers(String message) {
+        for (NotificationObserver observer : observers) {
+            observer.update(message);
+        }
+    }
+
+    // Hàm giả lập nghiệp vụ khi Giảng viên thay đổi lịch học
+    public void changeSchedule(String newScheduleInfo) {
+        System.out.println("\n[HỆ THỐNG] Giảng viên vừa cập nhật: " + newScheduleInfo);
+
+        // Ngay khi có thay đổi, hệ thống TỰ ĐỘNG phát thông báo đi
+        notifyObservers(newScheduleInfo);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // Khởi tạo hệ thống quản lý lịch
+        ScheduleManager scheduleManager = new ScheduleManager();
+
+        // Khởi tạo các kênh thông báo hiện tại
+        NotificationObserver emailChannel = new EmailNotifier();
+        NotificationObserver mobileChannel = new MobileAppNotifier();
+
+        // Đăng ký các kênh này vào hệ thống
+        scheduleManager.addObserver(emailChannel);
+        scheduleManager.addObserver(mobileChannel);
+
+        // Kịch bản 1: Giảng viên đổi phòng học
+        scheduleManager.changeSchedule("Môn Kiến trúc phần mềm dời sang phòng H5.01");
+        // Output sẽ tự động gọi cả Email và Mobile App
+
+        // ----------------------------------------------------
+        // Kịch bản 2: Bổ sung thêm kênh SMS (Mở rộng trong tương lai)
+        NotificationObserver smsChannel = new SMSNotifier();
+        scheduleManager.addObserver(smsChannel); // Chỉ cần add thêm vào danh sách
+
+        // Giảng viên tiếp tục thông báo hủy buổi học
+        scheduleManager.changeSchedule("Hủy buổi học ngày mai do giảng viên đi công tác");
+        // Output lúc này sẽ gọi cả 3 kênh: Email, Mobile App, và SMS.
+    }
+}
+
+Strategy_Pattern
+
+public interface PaymentStrategy {
+    void pay(double amount);
+}
+
+public class MomoPayment implements PaymentStrategy {
+    @Override
+    public void pay(double amount) {
+        System.out.println("Thanh toán " + amount + " VND qua ví điện tử MoMo thành công.");
+    }
+}
+
+public class CreditCardPayment implements PaymentStrategy {
+    @Override
+    public void pay(double amount) {
+        //logic nghiep vu
+        System.out.println("Thanh toán " + amount + " VND bằng thẻ Credit Card thành công.");
+    }
+}
+
+public class ZaloPayPayment implements PaymentStrategy {
+    @Override
+    public void pay(double amount) {
+        amount = amount * 0.01;
+        System.out.println("Thanh toán " + amount + " VND qua ví điện tử ZaloPay thành công.");
+    }
+}
+
+public class TicketSystem {
+    // Biến lưu trữ chiến lược thanh toán hiện tại
+    private PaymentStrategy paymentStrategy;
+
+    // Phương thức cho phép thay đổi chiến lược thanh toán linh hoạt tại runtime
+    public void setPaymentStrategy(PaymentStrategy paymentStrategy) {
+        this.paymentStrategy = paymentStrategy;
+    }
+
+    // Phương thức thực thi thanh toán
+    public void checkout(double amount) {
+        if (this.paymentStrategy == null) {
+            System.out.println("Lỗi: Vui lòng chọn một phương thức thanh toán trước khi thanh toán!");
+            return;
+        }
+        // Gọi uỷ quyền (delegate) hành vi pay cho đối tượng strategy hiện tại xử lý
+        this.paymentStrategy.pay(amount);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        TicketSystem ticketSystem = new TicketSystem();
+        double totalAmount = 500000; // Giá vé tàu 500,000 VND
+
+        System.out.println("--- Giao dịch 1 ---");
+        // Khách hàng chọn thanh toán bằng MoMo
+        ticketSystem.setPaymentStrategy(new MomoPayment());
+        ticketSystem.checkout(totalAmount);
+        // Output: Thanh toán 500000.0 VND qua ví điện tử MoMo thành công.
+
+        System.out.println("\n--- Giao dịch 2 ---");
+        // Khách hàng đổi ý, muốn thanh toán bằng Credit Card
+        ticketSystem.setPaymentStrategy(new CreditCardPayment());
+        ticketSystem.checkout(totalAmount);
+        // Output: Thanh toán 500000.0 VND bằng thẻ Credit Card thành công.
+
+        System.out.println("\n--- Giao dịch 3 ---");
+        // Khách hàng khác chọn ZaloPay
+        ticketSystem.setPaymentStrategy(new ZaloPayPayment());
+        ticketSystem.checkout(totalAmount);
+        // Output: Thanh toán 500000.0 VND qua ví điện tử ZaloPay thành công.
+    }
+}
+
+State_Pattern
+
+public class Order {
+    private OrderState state;
+
+    public Order() {
+        // Trạng thái khởi tạo mặc định theo sơ đồ là CHỜ XÁC NHẬN
+        this.state = new ChoXacNhanState();
+    }
+
+    // Cho phép thay đổi trạng thái từ bên trong các State classes
+    public void setState(OrderState state) {
+        this.state = state;
+    }
+
+    // Uỷ quyền xử lý yêu cầu cho trạng thái hiện tại
+    public void sendRequest(String action) {
+        this.state.sendRequest(this, action);
+    }
+
+    // Uỷ quyền kiểm tra trạng thái
+    public void checkStatus() {
+        this.state.checkStatus();
+    }
+}
+
+public interface OrderState {
+    void sendRequest(Order order, String action);
+    void checkStatus();
+}
+
+public class ChoXacNhanState implements OrderState {
+    @Override
+    public void sendRequest(Order order, String action) {
+        if (action.equals("he_thong_xac_nhan")) {
+            System.out.println("Hệ thống xác nhận còn hàng. Chuyển sang: CHỜ LẤY HÀNG");
+            order.setState(new ChoLayHangState());
+        } else if (action.equals("khach_hang_huy")) {
+            System.out.println("Khách hàng hủy đơn. Chuyển sang: ĐÃ HỦY");
+            order.setState(new DaHuyState());
+        } else {
+            System.out.println("Hành động '" + action + "' không hợp lệ ở trạng thái Chờ xác nhận!");
+        }
+    }
+
+    @Override
+    public void checkStatus() {
+        System.out.println("Trạng thái hiện tại: CHỜ XÁC NHẬN");
+    }
+}
+
+public class ChoLayHangState implements OrderState {
+    @Override
+    public void sendRequest(Order order, String action) {
+        if (action.equals("giao_cho_shipper")) {
+            System.out.println("Hàng đã chuyển cho shipper. Chuyển sang: ĐANG GIAO");
+            order.setState(new DangGiaoState());
+        } else {
+            System.out.println("Hành động không hợp lệ ở trạng thái Chờ lấy hàng!");
+        }
+    }
+
+    @Override
+    public void checkStatus() {
+        System.out.println("Trạng thái hiện tại: CHỜ LẤY HÀNG");
+    }
+}
+
+public class DangGiaoState implements OrderState {
+    @Override
+    public void sendRequest(Order order, String action) {
+        if (action.equals("giao_thanh_cong")) {
+            System.out.println("Hàng đã chuyển cho khách hàng. Chuyển sang: ĐÃ GIAO");
+            order.setState(new DaGiaoState());
+        } else if (action.equals("khach_tra_hang")) {
+            System.out.println("Khách hàng không chấp nhận, trả hàng. Chuyển sang: TRẢ HÀNG");
+            order.setState(new TraHangState());
+        } else if (action.equals("khach_hang_huy")) {
+            // RÀNG BUỘC THEO YÊU CẦU ĐỀ BÀI
+            System.out.println("LỖI RÀNG BUỘC: Không thể hủy đơn khi hàng ĐANG GIAO!");
+        } else {
+            System.out.println("Hành động không hợp lệ ở trạng thái Đang giao!");
+        }
+    }
+
+    @Override
+    public void checkStatus() {
+        System.out.println("Trạng thái hiện tại: ĐANG GIAO");
+    }
+}
+
+public class DaGiaoState implements OrderState {
+    @Override
+    public void sendRequest(Order order, String action) {
+        System.out.println("Đơn hàng ĐÃ GIAO thành công, không thể thực hiện thêm thao tác.");
+    }
+    @Override
+    public void checkStatus() { System.out.println("Trạng thái hiện tại: ĐÃ GIAO"); }
+}
+
+public class DaHuyState implements OrderState {
+    @Override
+    public void sendRequest(Order order, String action) {
+        System.out.println("Đơn hàng ĐÃ HỦY, không thể thực hiện thêm thao tác.");
+    }
+    @Override
+    public void checkStatus() { System.out.println("Trạng thái hiện tại: ĐÃ HỦY"); }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("--- MÔ PHỎNG QUY TRÌNH ĐƠN HÀNG ---");
+
+        // 1. Tạo đơn hàng mới
+        Order myOrder = new Order();
+        myOrder.checkStatus();
+        // Trạng thái hiện tại: CHỜ XÁC NHẬN
+
+        // 2. Chuyển các bước hợp lệ
+        myOrder.sendRequest("he_thong_xac_nhan");
+        // Chuyển sang: CHỜ LẤY HÀNG
+
+        myOrder.sendRequest("giao_cho_shipper");
+        // Chuyển sang: ĐANG GIAO
+        myOrder.checkStatus();
+
+        // 3. Kiểm chứng ràng buộc (Thử hủy khi đang giao hàng)
+        System.out.println("\n-> Thử khách hàng bấm nút Hủy đơn:");
+        myOrder.sendRequest("khach_hang_huy");
+        // In ra: LỖI RÀNG BUỘC: Không thể hủy đơn khi hàng ĐANG GIAO!
+
+        // 4. Kết thúc quy trình
+        System.out.println("\n-> Hoàn tất giao hàng:");
+        myOrder.sendRequest("giao_thanh_cong");
+        // Chuyển sang: ĐÃ GIAO
+        myOrder.checkStatus();
+    }
+}
